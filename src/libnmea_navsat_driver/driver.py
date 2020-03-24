@@ -39,6 +39,7 @@ import rospy
 from sensor_msgs.msg import NavSatFix, NavSatStatus, TimeReference
 from geometry_msgs.msg import TwistStamped, QuaternionStamped
 from tf.transformations import quaternion_from_euler
+from std_msgs.msg import Float32
 
 from libnmea_navsat_driver.checksum_utils import check_nmea_checksum
 import libnmea_navsat_driver.parser
@@ -74,6 +75,7 @@ class RosNMEADriver(object):
         if not self.use_GNSS_time:
             self.time_ref_pub = rospy.Publisher(
                 'time_reference', TimeReference, queue_size=1)
+        self.speed_pub = rospy.Publisher('speed', Float32, queue_size=1)
 
         self.time_ref_source = rospy.get_param('~time_ref_source', None)
         self.use_RMC = rospy.get_param('~useRMC', False)
@@ -121,13 +123,13 @@ class RosNMEADriver(object):
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
             ],
             # RTK Fix
-            4: [
+            5: [
                 self.default_epe_quality4,
                 NavSatStatus.STATUS_GBAS_FIX,
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
             ],
             # RTK Float
-            5: [
+            6: [
                 self.default_epe_quality5,
                 NavSatStatus.STATUS_GBAS_FIX,
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
@@ -152,6 +154,13 @@ class RosNMEADriver(object):
         Returns:
             bool: True if the NMEA string is successfully processed, False if there is an error.
         """
+
+        # Strip any data before nmea starts
+
+        nmea_cleaned = nmea_string.split('$')
+        if nmea_cleaned > 1:
+            nmea_string = '$' + nmea_cleaned[1]
+
         if not check_nmea_checksum(nmea_string):
             rospy.logwarn("Received a sentence with an invalid checksum. " +
                           "Sentence was: %s" % repr(nmea_string))
@@ -194,6 +203,7 @@ class RosNMEADriver(object):
                 current_fix.header.stamp = rospy.Time(data['utc_time'][0], data['utc_time'][1])
 
             fix_type = data['fix_type']
+            
             if not (fix_type in self.gps_qualities):
                 fix_type = -1
             gps_qual = self.gps_qualities[fix_type]
@@ -308,6 +318,21 @@ class RosNMEADriver(object):
                 current_vel.twist.linear.y = data['speed'] * \
                     math.cos(data['true_course'])
                 self.vel_pub.publish(current_vel)
+
+                self.speed_pub.publish(data['speed'])
+
+                if 'HDT' not in parsed_sentence:
+                    current_heading = QuaternionStamped()
+                    current_heading.header.stamp = current_time
+                    current_heading.header.frame_id = frame_id
+                    q = quaternion_from_euler(0, 0, math.radians(data['true_course']))
+                    current_heading.quaternion.x = q[0]
+                    current_heading.quaternion.y = q[1]
+                    current_heading.quaternion.z = q[2]
+                    current_heading.quaternion.w = q[3]
+                    self.heading_pub.publish(current_heading)
+
+
         elif 'GST' in parsed_sentence:
             data = parsed_sentence['GST']
 
