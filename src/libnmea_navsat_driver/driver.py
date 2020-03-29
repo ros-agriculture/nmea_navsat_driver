@@ -155,12 +155,6 @@ class RosNMEADriver(object):
             bool: True if the NMEA string is successfully processed, False if there is an error.
         """
 
-        # Strip any data before nmea starts
-
-        nmea_cleaned = nmea_string.split('$')
-        if nmea_cleaned > 1:
-            nmea_string = '$' + nmea_cleaned[1]
-
         if not check_nmea_checksum(nmea_string):
             rospy.logwarn("Received a sentence with an invalid checksum. " +
                           "Sentence was: %s" % repr(nmea_string))

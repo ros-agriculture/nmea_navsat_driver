@@ -62,6 +62,9 @@ def main():
             driver = RosNMEADriver()
             while not rospy.is_shutdown():
                 data = GPS.readline().strip()
+                # https://github.com/ros-drivers/nmea_navsat_driver/pull/55
+                # remove all stuff before the first $. 
+                data = data[data.index('$'):] 
                 try:
                     driver.add_sentence(data, frame_id)
                 except ValueError as e:
