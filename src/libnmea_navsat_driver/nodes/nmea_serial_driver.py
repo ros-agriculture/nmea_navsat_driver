@@ -64,7 +64,11 @@ def main():
                 data = GPS.readline().strip()
                 # https://github.com/ros-drivers/nmea_navsat_driver/pull/55
                 # remove all stuff before the first $. 
-                data = data[data.index('$'):] 
+                try:
+                    # some strings contained no $ and were causing a fatal error.
+                    data = data[data.index('$'):]
+                except:
+                    print("no $ to index data - data is ",data)
                 try:
                     driver.add_sentence(data, frame_id)
                 except ValueError as e:
