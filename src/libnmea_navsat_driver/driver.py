@@ -96,7 +96,15 @@ class RosNMEADriver(object):
 
         """Format for this dictionary is the fix type from a GGA message as the key, with
         each entry containing a tuple consisting of a default estimated
-        position error, a NavSatStatus value, and a NavSatFix covariance value."""
+        position error, a NavSatStatus value, and a NavSatFix covariance value.
+        
+        GPS Quality indicator:
+        0: Fix not valid
+        1: GPS fix
+        2: Differential GPS fix, OmniSTAR VBS
+        4: Real-Time Kinematic, fixed integers
+        5: Real-Time Kinematic, float integers, OmniSTAR XP/HP or Location RTK
+        """
         self.gps_qualities = {
             # Unknown
             -1: [
@@ -123,13 +131,13 @@ class RosNMEADriver(object):
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
             ],
             # RTK Fix
-            5: [
+            4: [
                 self.default_epe_quality4,
                 NavSatStatus.STATUS_GBAS_FIX,
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
             ],
             # RTK Float
-            6: [
+            5: [
                 self.default_epe_quality5,
                 NavSatStatus.STATUS_GBAS_FIX,
                 NavSatFix.COVARIANCE_TYPE_APPROXIMATED
